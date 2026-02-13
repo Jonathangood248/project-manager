@@ -82,23 +82,53 @@ db.exec(`
     project_id INTEGER NOT NULL,
     title TEXT NOT NULL,
     status TEXT DEFAULT 'To Do',
+    priority TEXT DEFAULT 'Medium',
     due_date TEXT,
     notes TEXT,
+    parent_task_id INTEGER,
     created_at TEXT DEFAULT (datetime('now')),
-    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_task_id) REFERENCES tasks(id) ON DELETE CASCADE
   )
 `);
-// ↑ The "tasks" table has seven columns:
+// ↑ The "tasks" table has nine columns:
 //   - id: unique number for each task
 //   - project_id: which project this task belongs to
 //   - title: the task's name (like "Buy groceries")
 //   - status: "To Do", "In Progress", or "Done"
+//   - priority: "Low", "Medium", or "High"
 //   - due_date: when the task is due (optional)
 //   - notes: any extra details (optional)
+//   - parent_task_id: if this is a subtask, points to parent task
 //   - created_at: when the task was created
 //   - FOREIGN KEY: this links each task to a project.
 //     "ON DELETE CASCADE" means if you delete a project,
 //     all its tasks get deleted too (no orphan tasks).
+//   - The parent_task_id also has CASCADE, so deleting a parent
+//     task deletes all its subtasks.
+
+// ── Labels table ──────────────────────────────────────────
+// This table stores all available labels/tags.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS labels (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    color TEXT NOT NULL
+  )
+`);
+
+// ── Task-Label junction table ────────────────────────────
+// This table connects tasks to labels (many-to-many relationship).
+// A task can have multiple labels, and a label can be on multiple tasks.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS task_labels (
+    task_id INTEGER NOT NULL,
+    label_id INTEGER NOT NULL,
+    PRIMARY KEY (task_id, label_id),
+    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+    FOREIGN KEY (label_id) REFERENCES labels(id) ON DELETE CASCADE
+  )
+`);
 
 // Enable foreign key enforcement (SQLite has this off by default)
 db.pragma('foreign_keys = ON');
@@ -174,28 +204,30 @@ function getTaskById(id) {
 // Adds a task to a specific project.
 // We provide the project_id so the database knows which
 // project this task belongs to.
-function createTask(projectId, title, status = 'To Do', dueDate = null, notes = null) {
+function createTask(projectId, title, status = 'To Do', dueDate = null, notes = null, priority = 'Medium', parentTaskId = null) {
   const stmt = db.prepare(
-    'INSERT INTO tasks (project_id, title, status, due_date, notes) VALUES (?, ?, ?, ?, ?)'
+    'INSERT INTO tasks (project_id, title, status, due_date, notes, priority, parent_task_id) VALUES (?, ?, ?, ?, ?, ?, ?)'
   );
-  const result = stmt.run(projectId, title, status, dueDate, notes);
+  const result = stmt.run(projectId, title, status, dueDate, notes, priority, parentTaskId);
   return {
     id: result.lastInsertRowid,
     project_id: projectId,
     title,
     status,
     due_date: dueDate,
-    notes
+    notes,
+    priority,
+    parent_task_id: parentTaskId
   };
 }
 
 // ── Update an existing task ───────────────────────────────
 // Changes any or all fields of a task.
-function updateTask(id, title, status, dueDate, notes) {
+function updateTask(id, title, status, dueDate, notes, priority = 'Medium') {
   const stmt = db.prepare(
-    'UPDATE tasks SET title = ?, status = ?, due_date = ?, notes = ? WHERE id = ?'
+    'UPDATE tasks SET title = ?, status = ?, due_date = ?, notes = ?, priority = ? WHERE id = ?'
   );
-  const result = stmt.run(title, status, dueDate, notes, id);
+  const result = stmt.run(title, status, dueDate, notes, priority, id);
   return result.changes > 0;
 }
 
@@ -203,6 +235,60 @@ function updateTask(id, title, status, dueDate, notes) {
 function deleteTask(id) {
   const stmt = db.prepare('DELETE FROM tasks WHERE id = ?');
   const result = stmt.run(id);
+  return result.changes > 0;
+}
+
+// ── Get subtasks for a parent task ───────────────────────
+function getSubtasks(parentTaskId) {
+  const stmt = db.prepare('SELECT * FROM tasks WHERE parent_task_id = ? ORDER BY created_at DESC');
+  return stmt.all(parentTaskId);
+}
+
+// ============================================================
+// LABEL OPERATIONS
+// ============================================================
+
+// ── Get all labels ────────────────────────────────────────
+function getAllLabels() {
+  const stmt = db.prepare('SELECT * FROM labels ORDER BY name');
+  return stmt.all();
+}
+
+// ── Create a new label ────────────────────────────────────
+function createLabel(name, color) {
+  const stmt = db.prepare('INSERT INTO labels (name, color) VALUES (?, ?)');
+  const result = stmt.run(name, color);
+  return { id: result.lastInsertRowid, name, color };
+}
+
+// ── Delete a label ────────────────────────────────────────
+function deleteLabel(id) {
+  const stmt = db.prepare('DELETE FROM labels WHERE id = ?');
+  const result = stmt.run(id);
+  return result.changes > 0;
+}
+
+// ── Get labels for a specific task ───────────────────────
+function getTaskLabels(taskId) {
+  const stmt = db.prepare(`
+    SELECT l.* FROM labels l
+    JOIN task_labels tl ON l.id = tl.label_id
+    WHERE tl.task_id = ?
+  `);
+  return stmt.all(taskId);
+}
+
+// ── Add a label to a task ─────────────────────────────────
+function addLabelToTask(taskId, labelId) {
+  const stmt = db.prepare('INSERT OR IGNORE INTO task_labels (task_id, label_id) VALUES (?, ?)');
+  const result = stmt.run(taskId, labelId);
+  return result.changes > 0;
+}
+
+// ── Remove a label from a task ────────────────────────────
+function removeLabelFromTask(taskId, labelId) {
+  const stmt = db.prepare('DELETE FROM task_labels WHERE task_id = ? AND label_id = ?');
+  const result = stmt.run(taskId, labelId);
   return result.changes > 0;
 }
 
@@ -223,5 +309,12 @@ module.exports = {
   getTaskById,
   createTask,
   updateTask,
-  deleteTask
+  deleteTask,
+  getSubtasks,
+  getAllLabels,
+  createLabel,
+  deleteLabel,
+  getTaskLabels,
+  addLabelToTask,
+  removeLabelFromTask
 };

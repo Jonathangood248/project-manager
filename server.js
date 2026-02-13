@@ -180,7 +180,7 @@ app.post('/api/projects/:projectId/tasks', (req, res) => {
       return res.status(404).json({ error: 'Project not found' });
     }
 
-    const { title, status, due_date, notes } = req.body;
+    const { title, status, due_date, notes, priority, parent_task_id } = req.body;
 
     if (!title || title.trim() === '') {
       return res.status(400).json({ error: 'Task title is required' });
@@ -191,7 +191,9 @@ app.post('/api/projects/:projectId/tasks', (req, res) => {
       title.trim(),
       status || 'To Do',
       due_date || null,
-      notes || null
+      notes || null,
+      priority || 'Medium',
+      parent_task_id || null
     );
     res.status(201).json(task);
   } catch (error) {
@@ -217,17 +219,18 @@ app.put('/api/tasks/:id', (req, res) => {
     const status = req.body.status !== undefined ? req.body.status : existingTask.status;
     const due_date = req.body.due_date !== undefined ? req.body.due_date : existingTask.due_date;
     const notes = req.body.notes !== undefined ? req.body.notes : existingTask.notes;
+    const priority = req.body.priority !== undefined ? req.body.priority : existingTask.priority;
 
     if (!title || title === '') {
       return res.status(400).json({ error: 'Task title is required' });
     }
 
-    const success = database.updateTask(taskId, title, status, due_date, notes);
+    const success = database.updateTask(taskId, title, status, due_date, notes, priority);
     if (!success) {
       return res.status(404).json({ error: 'Task not found' });
     }
 
-    res.json({ id: taskId, title, status, due_date, notes });
+    res.json({ id: taskId, title, status, due_date, notes, priority });
   } catch (error) {
     console.error('Error updating task:', error);
     res.status(500).json({ error: 'Failed to update task' });
@@ -246,6 +249,120 @@ app.delete('/api/tasks/:id', (req, res) => {
   } catch (error) {
     console.error('Error deleting task:', error);
     res.status(500).json({ error: 'Failed to delete task' });
+  }
+});
+
+// ── GET /api/tasks/:id/subtasks ───────────────────────────
+// Get all subtasks for a parent task.
+app.get('/api/tasks/:id/subtasks', (req, res) => {
+  try {
+    const subtasks = database.getSubtasks(Number(req.params.id));
+    res.json(subtasks);
+  } catch (error) {
+    console.error('Error fetching subtasks:', error);
+    res.status(500).json({ error: 'Failed to fetch subtasks' });
+  }
+});
+
+// ============================================================
+// API ROUTES – LABELS
+// ============================================================
+
+// ── GET /api/labels ───────────────────────────────────────
+// Get all available labels.
+app.get('/api/labels', (req, res) => {
+  try {
+    const labels = database.getAllLabels();
+    res.json(labels);
+  } catch (error) {
+    console.error('Error fetching labels:', error);
+    res.status(500).json({ error: 'Failed to fetch labels' });
+  }
+});
+
+// ── POST /api/labels ──────────────────────────────────────
+// Create a new label.
+app.post('/api/labels', (req, res) => {
+  try {
+    const { name, color } = req.body;
+
+    if (!name || name.trim() === '') {
+      return res.status(400).json({ error: 'Label name is required' });
+    }
+
+    if (!color || color.trim() === '') {
+      return res.status(400).json({ error: 'Label color is required' });
+    }
+
+    const label = database.createLabel(name.trim(), color.trim());
+    res.status(201).json(label);
+  } catch (error) {
+    console.error('Error creating label:', error);
+    // Handle unique constraint violation
+    if (error.message.includes('UNIQUE constraint failed')) {
+      return res.status(409).json({ error: 'Label already exists' });
+    }
+    res.status(500).json({ error: 'Failed to create label' });
+  }
+});
+
+// ── DELETE /api/labels/:id ────────────────────────────────
+// Delete a label.
+app.delete('/api/labels/:id', (req, res) => {
+  try {
+    const success = database.deleteLabel(Number(req.params.id));
+    if (!success) {
+      return res.status(404).json({ error: 'Label not found' });
+    }
+    res.json({ message: 'Label deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting label:', error);
+    res.status(500).json({ error: 'Failed to delete label' });
+  }
+});
+
+// ── GET /api/tasks/:id/labels ─────────────────────────────
+// Get all labels for a specific task.
+app.get('/api/tasks/:id/labels', (req, res) => {
+  try {
+    const labels = database.getTaskLabels(Number(req.params.id));
+    res.json(labels);
+  } catch (error) {
+    console.error('Error fetching task labels:', error);
+    res.status(500).json({ error: 'Failed to fetch task labels' });
+  }
+});
+
+// ── POST /api/tasks/:taskId/labels/:labelId ───────────────
+// Add a label to a task.
+app.post('/api/tasks/:taskId/labels/:labelId', (req, res) => {
+  try {
+    const taskId = Number(req.params.taskId);
+    const labelId = Number(req.params.labelId);
+
+    const success = database.addLabelToTask(taskId, labelId);
+    res.json({ success, message: success ? 'Label added to task' : 'Label already on task' });
+  } catch (error) {
+    console.error('Error adding label to task:', error);
+    res.status(500).json({ error: 'Failed to add label to task' });
+  }
+});
+
+// ── DELETE /api/tasks/:taskId/labels/:labelId ─────────────
+// Remove a label from a task.
+app.delete('/api/tasks/:taskId/labels/:labelId', (req, res) => {
+  try {
+    const taskId = Number(req.params.taskId);
+    const labelId = Number(req.params.labelId);
+
+    const success = database.removeLabelFromTask(taskId, labelId);
+    if (!success) {
+      return res.status(404).json({ error: 'Label not found on task' });
+    }
+    res.json({ message: 'Label removed from task' });
+  } catch (error) {
+    console.error('Error removing label from task:', error);
+    res.status(500).json({ error: 'Failed to remove label from task' });
   }
 });
 

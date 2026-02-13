@@ -14,6 +14,42 @@
 // it's on and runs the appropriate code.
 // ============================================================
 
+// ── Theme Management ───────────────────────────────────────
+
+// Load saved theme or default to dark
+const savedTheme = localStorage.getItem('theme') || 'dark';
+document.documentElement.setAttribute('data-theme', savedTheme);
+
+// Update theme toggle icon
+function updateThemeIcon() {
+  const themeToggle = document.getElementById('theme-toggle');
+  if (!themeToggle) return;
+
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const icon = themeToggle.querySelector('.theme-icon');
+  icon.textContent = currentTheme === 'light' ? '🌙' : '☀️';
+}
+
+// Toggle theme function
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+  document.documentElement.setAttribute('data-theme', newTheme);
+  localStorage.setItem('theme', newTheme);
+  updateThemeIcon();
+}
+
+// Initialize theme toggle button (when DOM is ready)
+document.addEventListener('DOMContentLoaded', () => {
+  updateThemeIcon();
+
+  const themeToggle = document.getElementById('theme-toggle');
+  if (themeToggle) {
+    themeToggle.addEventListener('click', toggleTheme);
+  }
+});
+
 // ── Utility Functions ──────────────────────────────────────
 
 /**
@@ -124,6 +160,15 @@ function statusClass(status) {
 }
 
 /**
+ * Get the CSS class name for a priority.
+ */
+function priorityClass(priority) {
+  if (priority === 'High') return 'high';
+  if (priority === 'Low') return 'low';
+  return 'medium';
+}
+
+/**
  * Escape HTML to prevent XSS (a type of security vulnerability).
  * If someone types <script> in a task title, this makes it safe.
  */
@@ -177,6 +222,17 @@ function initIndexPage() {
   async function loadProjects() {
     try {
       const projects = await apiRequest('/api/projects');
+
+      // Load task stats for each project
+      for (const project of projects) {
+        const tasks = await apiRequest(`/api/projects/${project.id}/tasks`);
+        const totalTasks = tasks.length;
+        const completedTasks = tasks.filter(t => t.status === 'Done').length;
+        project.taskCount = totalTasks;
+        project.completedCount = completedTasks;
+        project.progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+      }
+
       renderProjects(projects);
     } catch (error) {
       showToast('Failed to load projects', 'error');
@@ -208,6 +264,15 @@ function initIndexPage() {
           <button class="icon-btn danger" onclick="event.stopPropagation(); confirmDeleteProject(${project.id}, '${escapeHtml(project.name).replace(/'/g, "\\'")}')" title="Delete">🗑️</button>
         </div>
         <div class="project-card-name">${escapeHtml(project.name)}</div>
+        <div class="project-card-stats">
+          <div class="stat-row">
+            <span class="stat-label">${project.completedCount} of ${project.taskCount} tasks</span>
+            <span class="stat-value">${project.progressPercent}%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: ${project.progressPercent}%"></div>
+          </div>
+        </div>
         <div class="project-card-meta">
           <span>Created ${formatDate(project.created_at)}</span>
         </div>
@@ -342,16 +407,34 @@ function initProjectPage() {
   const taskCount = document.getElementById('task-count');
   const addTaskBtn = document.getElementById('add-task-btn');
   const editTitleBtn = document.getElementById('edit-title-btn');
+  const manageLabelsBtn = document.getElementById('manage-labels-btn');
+
+  // Filter and search elements
+  const searchInput = document.getElementById('search-input');
+  const filterStatus = document.getElementById('filter-status');
+  const filterPriority = document.getElementById('filter-priority');
+  const sortBy = document.getElementById('sort-by');
+  const clearFiltersBtn = document.getElementById('clear-filters');
 
   // Task modal elements
   const taskModal = 'task-modal';
   const taskModalTitle = document.getElementById('task-modal-title');
   const taskTitleInput = document.getElementById('task-title-input');
   const taskStatusInput = document.getElementById('task-status-input');
+  const taskPriorityInput = document.getElementById('task-priority-input');
   const taskDueInput = document.getElementById('task-due-input');
   const taskNotesInput = document.getElementById('task-notes-input');
+  const taskLabelsContainer = document.getElementById('task-labels-container');
   const taskSaveBtn = document.getElementById('task-modal-save');
   const taskCancelBtn = document.getElementById('task-modal-cancel');
+
+  // Labels modal elements
+  const labelsModal = 'labels-modal';
+  const newLabelName = document.getElementById('new-label-name');
+  const newLabelColor = document.getElementById('new-label-color');
+  const createLabelBtn = document.getElementById('create-label-btn');
+  const labelsList = document.getElementById('labels-list');
+  const labelsCloseBtn = document.getElementById('labels-close-btn');
 
   // Rename modal elements
   const renameModal = 'rename-modal';
@@ -367,6 +450,9 @@ function initProjectPage() {
   let editingTaskId = null;
   let deletingTaskId = null;
   let currentProject = null;
+  let allLabels = [];
+  let selectedLabelIds = [];
+  let allTasks = []; // Store all tasks for filtering
 
   // ── Load project info ──────────────────────────────────
   async function loadProject() {
@@ -382,14 +468,79 @@ function initProjectPage() {
     }
   }
 
+  // ── Load all labels ────────────────────────────────────
+  async function loadLabels() {
+    try {
+      allLabels = await apiRequest('/api/labels');
+    } catch (error) {
+      showToast('Failed to load labels', 'error');
+    }
+  }
+
   // ── Load and display tasks ────────────────────────────
   async function loadTasks() {
     try {
       const tasks = await apiRequest(`/api/projects/${projectId}/tasks`);
-      renderTasks(tasks);
+      // Load labels for each task
+      for (const task of tasks) {
+        task.labels = await apiRequest(`/api/tasks/${task.id}/labels`);
+      }
+      allTasks = tasks;
+      applyFiltersAndRender();
     } catch (error) {
       showToast('Failed to load tasks', 'error');
     }
+  }
+
+  // ── Apply filters and sorting ──────────────────────────
+  function applyFiltersAndRender() {
+    let filtered = [...allTasks];
+
+    // Search filter
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    if (searchTerm) {
+      filtered = filtered.filter(task =>
+        task.title.toLowerCase().includes(searchTerm) ||
+        (task.notes && task.notes.toLowerCase().includes(searchTerm))
+      );
+    }
+
+    // Status filter
+    const statusFilter = filterStatus.value;
+    if (statusFilter) {
+      filtered = filtered.filter(task => task.status === statusFilter);
+    }
+
+    // Priority filter
+    const priorityFilter = filterPriority.value;
+    if (priorityFilter) {
+      filtered = filtered.filter(task => task.priority === priorityFilter);
+    }
+
+    // Sorting
+    const sortValue = sortBy.value;
+    filtered.sort((a, b) => {
+      switch (sortValue) {
+        case 'created':
+          return new Date(b.created_at) - new Date(a.created_at);
+        case 'created-asc':
+          return new Date(a.created_at) - new Date(b.created_at);
+        case 'priority':
+          const priorityOrder = { 'High': 0, 'Medium': 1, 'Low': 2 };
+          return priorityOrder[a.priority || 'Medium'] - priorityOrder[b.priority || 'Medium'];
+        case 'due_date':
+          if (!a.due_date && !b.due_date) return 0;
+          if (!a.due_date) return 1;
+          if (!b.due_date) return -1;
+          return new Date(a.due_date) - new Date(b.due_date);
+        case 'title':
+          return a.title.localeCompare(b.title);
+        default:
+          return 0;
+      }
+    });
+
+    renderTasks(filtered);
   }
 
   // ── Render tasks in the table ──────────────────────────
@@ -408,10 +559,20 @@ function initProjectPage() {
 
     taskTableBody.innerHTML = tasks.map(task => {
       const sc = statusClass(task.status);
+      const pc = priorityClass(task.priority || 'Medium');
       const titleClass = task.status === 'Done' ? 'task-title done' : 'task-title';
       const overdue = task.status !== 'Done' && isOverdue(task.due_date);
       const dueDateHtml = task.due_date
         ? `<span class="due-date ${overdue ? 'overdue' : ''}">${formatDate(task.due_date)}${overdue ? ' ⚠️' : ''}</span>`
+        : '<span class="due-date none">—</span>';
+
+      const labelsHtml = task.labels && task.labels.length > 0
+        ? task.labels.map(label =>
+            `<span class="task-label-badge" style="background-color: ${label.color}20; color: ${label.color};">
+              <span class="label-color-dot" style="background-color: ${label.color};"></span>
+              ${escapeHtml(label.name)}
+            </span>`
+          ).join('')
         : '<span class="due-date none">—</span>';
 
       return `
@@ -425,6 +586,10 @@ function initProjectPage() {
               ${task.status}
             </button>
           </td>
+          <td>
+            <span class="priority-badge ${pc}">${task.priority || 'Medium'}</span>
+          </td>
+          <td><div class="task-labels">${labelsHtml}</div></td>
           <td>${dueDateHtml}</td>
           <td><span class="task-notes-preview">${escapeHtml(task.notes) || '<span class="due-date none">—</span>'}</span></td>
           <td>
@@ -455,15 +620,48 @@ function initProjectPage() {
     }
   };
 
+  // ── Render label checkboxes in task modal ─────────────
+  function renderLabelCheckboxes() {
+    if (allLabels.length === 0) {
+      taskLabelsContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem;">No labels yet. Click "🏷️ Labels" to create one.</p>';
+      return;
+    }
+
+    taskLabelsContainer.innerHTML = allLabels.map(label => {
+      const isChecked = selectedLabelIds.includes(label.id);
+      return `
+        <label class="label-checkbox ${isChecked ? 'checked' : ''}" style="background-color: ${label.color}20; color: ${label.color};">
+          <input type="checkbox" value="${label.id}" ${isChecked ? 'checked' : ''} onchange="toggleLabel(${label.id})">
+          <span class="label-color-dot" style="background-color: ${label.color};"></span>
+          ${escapeHtml(label.name)}
+        </label>
+      `;
+    }).join('');
+  }
+
+  // ── Toggle label selection ────────────────────────────
+  window.toggleLabel = function(labelId) {
+    const index = selectedLabelIds.indexOf(labelId);
+    if (index > -1) {
+      selectedLabelIds.splice(index, 1);
+    } else {
+      selectedLabelIds.push(labelId);
+    }
+    renderLabelCheckboxes();
+  };
+
   // ── Open modal for NEW task ────────────────────────────
   addTaskBtn.addEventListener('click', () => {
     editingTaskId = null;
+    selectedLabelIds = [];
     taskModalTitle.textContent = 'New Task';
     taskSaveBtn.textContent = 'Create';
     taskTitleInput.value = '';
     taskStatusInput.value = 'To Do';
+    taskPriorityInput.value = 'Medium';
     taskDueInput.value = '';
     taskNotesInput.value = '';
+    renderLabelCheckboxes();
     openModal(taskModal);
   });
 
@@ -476,13 +674,20 @@ function initProjectPage() {
         showToast('Task not found', 'error');
         return;
       }
+
+      // Load task labels
+      const taskLabels = await apiRequest(`/api/tasks/${taskId}/labels`);
+      selectedLabelIds = taskLabels.map(l => l.id);
+
       editingTaskId = taskId;
       taskModalTitle.textContent = 'Edit Task';
       taskSaveBtn.textContent = 'Save';
       taskTitleInput.value = task.title || '';
       taskStatusInput.value = task.status || 'To Do';
+      taskPriorityInput.value = task.priority || 'Medium';
       taskDueInput.value = task.due_date || '';
       taskNotesInput.value = task.notes || '';
+      renderLabelCheckboxes();
       openModal(taskModal);
     } catch (error) {
       showToast('Could not load task', 'error');
@@ -500,18 +705,35 @@ function initProjectPage() {
     const taskData = {
       title,
       status: taskStatusInput.value,
+      priority: taskPriorityInput.value,
       due_date: taskDueInput.value || null,
       notes: taskNotesInput.value.trim() || null
     };
 
     try {
+      let taskId;
       if (editingTaskId) {
         await apiRequest(`/api/tasks/${editingTaskId}`, 'PUT', taskData);
+        taskId = editingTaskId;
+
+        // Remove all existing labels and add selected ones
+        const existingLabels = await apiRequest(`/api/tasks/${taskId}/labels`);
+        for (const label of existingLabels) {
+          await apiRequest(`/api/tasks/${taskId}/labels/${label.id}`, 'DELETE');
+        }
+
         showToast('Task updated');
       } else {
-        await apiRequest(`/api/projects/${projectId}/tasks`, 'POST', taskData);
+        const newTask = await apiRequest(`/api/projects/${projectId}/tasks`, 'POST', taskData);
+        taskId = newTask.id;
         showToast('Task created');
       }
+
+      // Add selected labels
+      for (const labelId of selectedLabelIds) {
+        await apiRequest(`/api/tasks/${taskId}/labels/${labelId}`, 'POST');
+      }
+
       closeModal(taskModal);
       loadTasks();
     } catch (error) {
@@ -571,6 +793,102 @@ function initProjectPage() {
     deletingTaskId = null;
   });
 
+  // ── Labels Management ──────────────────────────────────
+
+  // Render labels list in management modal
+  function renderLabelsList() {
+    if (allLabels.length === 0) {
+      labelsList.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 1rem;">No labels yet</p>';
+      return;
+    }
+
+    labelsList.innerHTML = allLabels.map(label => `
+      <div class="label-item">
+        <span class="label-preview" style="background-color: ${label.color}20; color: ${label.color};">
+          <span class="label-color-dot" style="background-color: ${label.color};"></span>
+          ${escapeHtml(label.name)}
+        </span>
+        <button class="icon-btn danger" onclick="deleteLabel(${label.id}, '${escapeHtml(label.name).replace(/'/g, "\\'")}')" title="Delete">🗑️</button>
+      </div>
+    `).join('');
+  }
+
+  // Open labels management modal
+  manageLabelsBtn.addEventListener('click', () => {
+    renderLabelsList();
+    openModal(labelsModal);
+  });
+
+  // Create new label
+  createLabelBtn.addEventListener('click', async () => {
+    const name = newLabelName.value.trim();
+    const color = newLabelColor.value;
+
+    if (!name) {
+      showToast('Please enter a label name', 'error');
+      return;
+    }
+
+    try {
+      await apiRequest('/api/labels', 'POST', { name, color });
+      showToast('Label created');
+      newLabelName.value = '';
+      newLabelColor.value = '#6c8cff';
+      await loadLabels();
+      renderLabelsList();
+    } catch (error) {
+      showToast(error.message, 'error');
+    }
+  });
+
+  // Delete label
+  window.deleteLabel = async function(labelId, labelName) {
+    if (!confirm(`Delete label "${labelName}"? It will be removed from all tasks.`)) {
+      return;
+    }
+
+    try {
+      await apiRequest(`/api/labels/${labelId}`, 'DELETE');
+      showToast('Label deleted');
+      await loadLabels();
+      renderLabelsList();
+      renderLabelCheckboxes();
+      loadTasks(); // Refresh tasks to update labels display
+    } catch (error) {
+      showToast(error.message, 'error');
+    }
+  };
+
+  // Close labels modal
+  labelsCloseBtn.addEventListener('click', () => {
+    closeModal(labelsModal);
+    renderLabelCheckboxes(); // Refresh in case labels were added
+  });
+
+  // Enter key in label name field
+  newLabelName.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') createLabelBtn.click();
+  });
+
+  // ── Search and Filter Event Listeners ──────────────────
+
+  // Real-time search
+  searchInput.addEventListener('input', applyFiltersAndRender);
+
+  // Filter dropdowns
+  filterStatus.addEventListener('change', applyFiltersAndRender);
+  filterPriority.addEventListener('change', applyFiltersAndRender);
+  sortBy.addEventListener('change', applyFiltersAndRender);
+
+  // Clear filters button
+  clearFiltersBtn.addEventListener('click', () => {
+    searchInput.value = '';
+    filterStatus.value = '';
+    filterPriority.value = '';
+    sortBy.value = 'created';
+    applyFiltersAndRender();
+  });
+
   // ── Close modals when clicking outside ──────────────────
   document.querySelectorAll('.modal-overlay').forEach(overlay => {
     overlay.addEventListener('click', (e) => {
@@ -604,5 +922,6 @@ function initProjectPage() {
 
   // ── Initial load ───────────────────────────────────────
   loadProject();
+  loadLabels();
   loadTasks();
 }
