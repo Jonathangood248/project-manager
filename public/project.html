@@ -24,11 +24,16 @@
 
     <!-- ── Project Header ────────────────────────────────── -->
     <header class="header">
-      <div class="project-title-row">
-        <h1 id="project-name">Loading...</h1>
-        <button class="edit-title-btn icon-btn" id="edit-title-btn" title="Rename project">✏️</button>
+      <div>
+        <div class="project-title-row">
+          <h1 id="project-name">Loading...</h1>
+          <button class="edit-title-btn icon-btn" id="edit-title-btn" title="Rename project">✏️</button>
+        </div>
+        <p class="header-subtitle" id="project-date"></p>
       </div>
-      <p class="header-subtitle" id="project-date"></p>
+      <button class="theme-toggle" id="theme-toggle" title="Toggle theme">
+        <span class="theme-icon">🌙</span>
+      </button>
     </header>
 
     <!-- ── Toolbar ───────────────────────────────────────── -->
@@ -36,9 +41,44 @@
       <div class="toolbar-left">
         <span class="count-badge" id="task-count">0 tasks</span>
       </div>
-      <button class="btn btn-primary" id="add-task-btn">
-        + New Task
-      </button>
+      <div class="toolbar-right">
+        <button class="btn btn-ghost" id="manage-labels-btn">
+          🏷️ Labels
+        </button>
+        <button class="btn btn-primary" id="add-task-btn">
+          + New Task
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Search and Filter Bar ────────────────────────── -->
+    <div class="filter-bar">
+      <input
+        type="text"
+        id="search-input"
+        class="search-input"
+        placeholder="🔍 Search tasks..."
+      >
+      <select id="filter-status" class="filter-select">
+        <option value="">All Statuses</option>
+        <option value="To Do">To Do</option>
+        <option value="In Progress">In Progress</option>
+        <option value="Done">Done</option>
+      </select>
+      <select id="filter-priority" class="filter-select">
+        <option value="">All Priorities</option>
+        <option value="High">High</option>
+        <option value="Medium">Medium</option>
+        <option value="Low">Low</option>
+      </select>
+      <select id="sort-by" class="filter-select">
+        <option value="created">Sort: Newest</option>
+        <option value="created-asc">Sort: Oldest</option>
+        <option value="priority">Sort: Priority</option>
+        <option value="due_date">Sort: Due Date</option>
+        <option value="title">Sort: A-Z</option>
+      </select>
+      <button class="btn btn-ghost btn-sm" id="clear-filters">Clear</button>
     </div>
 
     <!-- ── Task Table ────────────────────────────────────── -->
@@ -46,10 +86,12 @@
       <table class="task-table">
         <thead>
           <tr>
-            <th style="width: 35%;">Task</th>
-            <th style="width: 15%;">Status</th>
-            <th style="width: 15%;">Due Date</th>
-            <th style="width: 25%;">Notes</th>
+            <th style="width: 25%;">Task</th>
+            <th style="width: 10%;">Status</th>
+            <th style="width: 9%;">Priority</th>
+            <th style="width: 15%;">Labels</th>
+            <th style="width: 11%;">Due Date</th>
+            <th style="width: 20%;">Notes</th>
             <th style="width: 10%;"></th>
           </tr>
         </thead>
@@ -95,6 +137,15 @@
         </div>
 
         <div class="form-group">
+          <label for="task-priority-input">Priority</label>
+          <select id="task-priority-input" class="form-input">
+            <option value="Low">Low</option>
+            <option value="Medium" selected>Medium</option>
+            <option value="High">High</option>
+          </select>
+        </div>
+
+        <div class="form-group">
           <label for="task-due-input">Due Date</label>
           <input
             type="date"
@@ -111,6 +162,13 @@
             placeholder="Any extra details..."
             maxlength="1000"
           ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Labels</label>
+          <div id="task-labels-container" class="labels-container">
+            <!-- Label checkboxes will be inserted here -->
+          </div>
         </div>
 
         <div class="modal-actions">
@@ -151,6 +209,46 @@
         <div class="modal-actions">
           <button class="btn btn-ghost" id="confirm-cancel">Cancel</button>
           <button class="btn btn-danger" id="confirm-delete">Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Modal: Manage Labels ──────────────────────────── -->
+    <div class="modal-overlay" id="labels-modal">
+      <div class="modal">
+        <h2>Manage Labels</h2>
+
+        <div class="form-group">
+          <label>Create New Label</label>
+          <div style="display: flex; gap: 0.5rem;">
+            <input
+              type="text"
+              id="new-label-name"
+              class="form-input"
+              placeholder="Label name"
+              maxlength="30"
+              style="flex: 1;"
+            >
+            <input
+              type="color"
+              id="new-label-color"
+              class="form-input"
+              value="#6c8cff"
+              style="width: 60px; padding: 0.25rem;"
+            >
+            <button class="btn btn-primary" id="create-label-btn">Add</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Existing Labels</label>
+          <div id="labels-list" class="labels-list">
+            <!-- Labels will be inserted here -->
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn btn-primary" id="labels-close-btn">Done</button>
         </div>
       </div>
     </div>
