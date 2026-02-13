@@ -1,0 +1,711 @@
+/* =============================================================
+   style.css – All the Visual Styling
+   =============================================================
+   This one file controls how EVERYTHING looks in the app.
+   
+   CSS works by selecting HTML elements and applying styles.
+   For example:
+     body { background: #111; }
+   means "make the page background dark gray".
+   
+   We use "CSS variables" (the --name things at the top) so we
+   can define colors once and reuse them everywhere. If you want
+   to change the accent color, you only change it in one place.
+   ============================================================= */
+
+/* ── CSS Variables (our color palette) ──────────────────────── */
+:root {
+  /* Background colors */
+  --bg-primary: #0f1117;
+  --bg-secondary: #1a1d27;
+  --bg-tertiary: #242836;
+  --bg-hover: #2a2f3e;
+
+  /* Text colors */
+  --text-primary: #e8eaed;
+  --text-secondary: #9aa0ad;
+  --text-muted: #5f6578;
+
+  /* Accent colors */
+  --accent: #6c8cff;
+  --accent-hover: #8ba4ff;
+  --accent-subtle: rgba(108, 140, 255, 0.12);
+
+  /* Status colors */
+  --status-todo: #5f6578;
+  --status-todo-bg: rgba(95, 101, 120, 0.15);
+  --status-progress: #f0a844;
+  --status-progress-bg: rgba(240, 168, 68, 0.15);
+  --status-done: #4ecb71;
+  --status-done-bg: rgba(78, 203, 113, 0.15);
+
+  /* Danger */
+  --danger: #f05656;
+  --danger-hover: #ff7070;
+  --danger-subtle: rgba(240, 86, 86, 0.12);
+
+  /* Borders & shadows */
+  --border: #2a2f3e;
+  --shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 16px;
+
+  /* Transitions */
+  --transition: 0.2s ease;
+}
+
+/* ── Reset & Base ──────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ── Subtle background texture ────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(ellipse at 20% 0%, rgba(108, 140, 255, 0.06) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 100%, rgba(108, 140, 255, 0.04) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── App Container ───────────────────────────────────────── */
+.app {
+  position: relative;
+  z-index: 1;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+/* ── Header ────────────────────────────────────────────────── */
+.header {
+  margin-bottom: 2.5rem;
+}
+
+.header h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.header h1 .icon {
+  font-size: 1.4rem;
+}
+
+.header-subtitle {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+/* Back link on project page */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+  padding: 0.3rem 0;
+  transition: color var(--transition);
+}
+
+.back-link:hover {
+  color: var(--accent);
+}
+
+/* ── Project Name (editable on project page) ──────────────── */
+.project-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.project-title-row h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.edit-title-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0.25rem;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition);
+  opacity: 0;
+}
+
+.project-title-row:hover .edit-title-btn {
+  opacity: 1;
+}
+
+.edit-title-btn:hover {
+  color: var(--accent);
+  background: var(--accent-subtle);
+}
+
+/* ── Buttons ───────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+  font-family: inherit;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: var(--accent-hover);
+  box-shadow: 0 2px 12px rgba(108, 140, 255, 0.25);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.btn-ghost:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}
+
+.btn-danger {
+  background: var(--danger-subtle);
+  color: var(--danger);
+}
+
+.btn-danger:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+.btn-sm {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.8rem;
+}
+
+/* ── Toolbar (area above tables/cards) ───────────────────── */
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.count-badge {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  padding: 0.2rem 0.6rem;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* ── Project Cards (on the main page) ────────────────────── */
+.projects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.project-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  cursor: pointer;
+  transition: all var(--transition);
+  position: relative;
+}
+
+.project-card:hover {
+  border-color: var(--accent);
+  background: var(--bg-tertiary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+
+.project-card-name {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.project-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.project-card-actions {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  display: flex;
+  gap: 0.3rem;
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.project-card:hover .project-card-actions {
+  opacity: 1;
+}
+
+.icon-btn {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all var(--transition);
+}
+
+.icon-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}
+
+.icon-btn.danger:hover {
+  background: var(--danger-subtle);
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+/* ── Task Table ────────────────────────────────────────────── */
+.task-table-wrapper {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.task-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.task-table thead {
+  background: var(--bg-tertiary);
+}
+
+.task-table th {
+  padding: 0.7rem 1rem;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.task-table td {
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.task-table tbody tr {
+  transition: background var(--transition);
+}
+
+.task-table tbody tr:hover {
+  background: var(--bg-hover);
+}
+
+.task-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Task title column */
+.task-title {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.task-title.done {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+/* ── Status Badge ──────────────────────────────────────────── */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 99px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+  border: none;
+  font-family: inherit;
+}
+
+.status-badge.todo {
+  background: var(--status-todo-bg);
+  color: var(--status-todo);
+}
+
+.status-badge.in-progress {
+  background: var(--status-progress-bg);
+  color: var(--status-progress);
+}
+
+.status-badge.done {
+  background: var(--status-done-bg);
+  color: var(--status-done);
+}
+
+/* Status dot */
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-badge.todo .status-dot {
+  background: var(--status-todo);
+}
+
+.status-badge.in-progress .status-dot {
+  background: var(--status-progress);
+}
+
+.status-badge.done .status-dot {
+  background: var(--status-done);
+}
+
+/* ── Due Date ──────────────────────────────────────────────── */
+.due-date {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.due-date.overdue {
+  color: var(--danger);
+  font-weight: 500;
+}
+
+.due-date.none {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ── Task Row Actions ──────────────────────────────────────── */
+.task-actions {
+  display: flex;
+  gap: 0.3rem;
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.task-table tbody tr:hover .task-actions {
+  opacity: 1;
+}
+
+/* ── Modal (pop-up dialog) ────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.25s ease;
+}
+
+.modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.modal {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: var(--shadow-lg);
+  transform: scale(0.95) translateY(10px);
+  transition: transform 0.25s ease;
+}
+
+.modal-overlay.active .modal {
+  transform: scale(1) translateY(0);
+}
+
+.modal h2 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+  color: var(--text-primary);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+/* ── Form Inputs ───────────────────────────────────────────── */
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 0.35rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-family: inherit;
+  transition: border-color var(--transition);
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
+}
+
+.form-input::placeholder {
+  color: var(--text-muted);
+}
+
+textarea.form-input {
+  resize: vertical;
+  min-height: 80px;
+}
+
+select.form-input {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239aa0ad' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  background-size: 1rem;
+  padding-right: 2rem;
+}
+
+/* ── Empty State ───────────────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-muted);
+}
+
+.empty-state .empty-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.75rem;
+  opacity: 0.5;
+}
+
+.empty-state p {
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+}
+
+.empty-state .hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+/* ── Toast Notifications ───────────────────────────────────── */
+.toast-container {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.toast {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  box-shadow: var(--shadow-lg);
+  animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.toast.success {
+  border-left: 3px solid var(--status-done);
+}
+
+.toast.error {
+  border-left: 3px solid var(--danger);
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* ── Confirm Dialog ────────────────────────────────────────── */
+.confirm-message {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 0.5rem;
+}
+
+/* ── Loading Spinner ───────────────────────────────────────── */
+.loading {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-muted);
+}
+
+/* ── Responsive Design ─────────────────────────────────────── */
+@media (max-width: 768px) {
+  .app {
+    padding: 1.25rem 1rem;
+  }
+
+  .projects-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .task-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .task-table {
+    min-width: 580px;
+  }
+
+  .task-actions {
+    opacity: 1;
+  }
+
+  .project-card-actions {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .header h1 {
+    font-size: 1.35rem;
+  }
+
+  .modal {
+    margin: 1rem;
+    padding: 1.25rem;
+  }
+}

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!--
+    project.html — Individual Project Page (Task Table)
+    ====================================================
+    This page shows all the tasks for a single project.
+    It displays them in a table where you can:
+      - Add new tasks
+      - Edit existing tasks (title, status, due date, notes)
+      - Delete tasks
+      - See status at a glance with colored badges
+  -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project — Project Manager</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+
+    <!-- ── Back Link ─────────────────────────────────────── -->
+    <a href="index.html" class="back-link">← All Projects</a>
+
+    <!-- ── Project Header ────────────────────────────────── -->
+    <header class="header">
+      <div class="project-title-row">
+        <h1 id="project-name">Loading...</h1>
+        <button class="edit-title-btn icon-btn" id="edit-title-btn" title="Rename project">✏️</button>
+      </div>
+      <p class="header-subtitle" id="project-date"></p>
+    </header>
+
+    <!-- ── Toolbar ───────────────────────────────────────── -->
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <span class="count-badge" id="task-count">0 tasks</span>
+      </div>
+      <button class="btn btn-primary" id="add-task-btn">
+        + New Task
+      </button>
+    </div>
+
+    <!-- ── Task Table ────────────────────────────────────── -->
+    <div class="task-table-wrapper" id="task-table-wrapper" style="display: none;">
+      <table class="task-table">
+        <thead>
+          <tr>
+            <th style="width: 35%;">Task</th>
+            <th style="width: 15%;">Status</th>
+            <th style="width: 15%;">Due Date</th>
+            <th style="width: 25%;">Notes</th>
+            <th style="width: 10%;"></th>
+          </tr>
+        </thead>
+        <tbody id="task-table-body">
+          <!-- Task rows get inserted here by app.js -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── Empty State ───────────────────────────────────── -->
+    <div class="empty-state" id="empty-state" style="display: none;">
+      <div class="empty-icon">✅</div>
+      <p>No tasks yet</p>
+      <p class="hint">Click "New Task" to add your first task</p>
+    </div>
+
+    <!-- ── Loading State ─────────────────────────────────── -->
+    <div class="loading" id="loading">Loading project...</div>
+
+    <!-- ── Modal: Create / Edit Task ─────────────────────── -->
+    <div class="modal-overlay" id="task-modal">
+      <div class="modal">
+        <h2 id="task-modal-title">New Task</h2>
+
+        <div class="form-group">
+          <label for="task-title-input">Title</label>
+          <input
+            type="text"
+            id="task-title-input"
+            class="form-input"
+            placeholder="What needs to be done?"
+            maxlength="200"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="task-status-input">Status</label>
+          <select id="task-status-input" class="form-input">
+            <option value="To Do">To Do</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Done">Done</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="task-due-input">Due Date</label>
+          <input
+            type="date"
+            id="task-due-input"
+            class="form-input"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="task-notes-input">Notes</label>
+          <textarea
+            id="task-notes-input"
+            class="form-input"
+            placeholder="Any extra details..."
+            maxlength="1000"
+          ></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn btn-ghost" id="task-modal-cancel">Cancel</button>
+          <button class="btn btn-primary" id="task-modal-save">Create</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Modal: Rename Project ─────────────────────────── -->
+    <div class="modal-overlay" id="rename-modal">
+      <div class="modal">
+        <h2>Rename Project</h2>
+        <div class="form-group">
+          <label for="rename-input">Project Name</label>
+          <input
+            type="text"
+            id="rename-input"
+            class="form-input"
+            placeholder="Project name"
+            maxlength="100"
+          >
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" id="rename-cancel">Cancel</button>
+          <button class="btn btn-primary" id="rename-save">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Modal: Confirm Delete ─────────────────────────── -->
+    <div class="modal-overlay" id="confirm-modal">
+      <div class="modal">
+        <h2>Delete Task</h2>
+        <p class="confirm-message" id="confirm-message">
+          Are you sure you want to delete this task? This cannot be undone.
+        </p>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" id="confirm-cancel">Cancel</button>
+          <button class="btn btn-danger" id="confirm-delete">Delete</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Toast Container ─────────────────────────────────── -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- ── JavaScript ──────────────────────────────────────── -->
+  <script src="app.js"></script>
+</body>
+</html>

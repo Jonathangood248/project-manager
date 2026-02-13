@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!--
+    index.html — The Main Page (Projects List)
+    ============================================
+    This is the first page you see when you open the app.
+    It shows all your projects as cards. You can:
+      - Create a new project
+      - Click a project to see its tasks
+      - Edit or delete a project
+  -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Manager</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+
+    <!-- ── Header ────────────────────────────────────────── -->
+    <header class="header">
+      <h1><span class="icon">📋</span> Project Manager</h1>
+      <p class="header-subtitle">Your personal workspace — all local, all yours.</p>
+    </header>
+
+    <!-- ── Toolbar (project count + add button) ──────────── -->
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <span class="count-badge" id="project-count">0 projects</span>
+      </div>
+      <button class="btn btn-primary" id="add-project-btn">
+        + New Project
+      </button>
+    </div>
+
+    <!-- ── Projects Grid (filled by JavaScript) ──────────── -->
+    <div class="projects-grid" id="projects-grid">
+      <!-- Project cards get inserted here by app.js -->
+    </div>
+
+    <!-- ── Empty State (shown when no projects exist) ────── -->
+    <div class="empty-state" id="empty-state" style="display: none;">
+      <div class="empty-icon">📂</div>
+      <p>No projects yet</p>
+      <p class="hint">Click "New Project" to get started</p>
+    </div>
+
+    <!-- ── Modal: Create / Edit Project ──────────────────── -->
+    <div class="modal-overlay" id="project-modal">
+      <div class="modal">
+        <h2 id="project-modal-title">New Project</h2>
+        <div class="form-group">
+          <label for="project-name-input">Project Name</label>
+          <input
+            type="text"
+            id="project-name-input"
+            class="form-input"
+            placeholder="e.g. Work, Personal, Side Hustle"
+            maxlength="100"
+          >
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" id="project-modal-cancel">Cancel</button>
+          <button class="btn btn-primary" id="project-modal-save">Create</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Modal: Confirm Delete ─────────────────────────── -->
+    <div class="modal-overlay" id="confirm-modal">
+      <div class="modal">
+        <h2>Delete Project</h2>
+        <p class="confirm-message" id="confirm-message">
+          Are you sure? This will delete the project and all its tasks. This cannot be undone.
+        </p>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" id="confirm-cancel">Cancel</button>
+          <button class="btn btn-danger" id="confirm-delete">Delete</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Toast Container (for notifications) ─────────────── -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- ── JavaScript ──────────────────────────────────────── -->
+  <script src="app.js"></script>
+</body>
+</html>

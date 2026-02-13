@@ -1,0 +1,16 @@
+{
+  "name": "project-manager",
+  "version": "1.0.0",
+  "description": "A local web-based project management tool — your personal Trello replacement",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.21.0",
+    "better-sqlite3": "^11.3.0"
+  }
+}
