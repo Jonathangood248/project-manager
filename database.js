@@ -91,6 +91,18 @@ db.exec(`
     FOREIGN KEY (parent_task_id) REFERENCES tasks(id) ON DELETE CASCADE
   )
 `);
+
+// ── Migrate existing tasks table if needed ────────────────
+// If the database was created before the pro features update,
+// the tasks table won't have the "priority" or "parent_task_id"
+// columns. We check for them and add them if missing.
+const taskColumns = db.pragma('table_info(tasks)').map(c => c.name);
+if (!taskColumns.includes('priority')) {
+  db.exec(`ALTER TABLE tasks ADD COLUMN priority TEXT DEFAULT 'Medium'`);
+}
+if (!taskColumns.includes('parent_task_id')) {
+  db.exec(`ALTER TABLE tasks ADD COLUMN parent_task_id INTEGER REFERENCES tasks(id) ON DELETE CASCADE`);
+}
 // ↑ The "tasks" table has nine columns:
 //   - id: unique number for each task
 //   - project_id: which project this task belongs to
